@@ -10,9 +10,15 @@ namespace LogProcessor.Data
 {
     public class LogRepository : ILogRepository
     {
+        private const string TABLE_NAME = "dbo.app_performance_lucas";        
+        private const string DATE_COLUMN_NAME = "Date";
+        private const string IP_COLUMN_NAME = "IP";
+        private const string URL_COLUMN_NAME = "URL";
+        private const string CONNECTION_NAME = "DatabaseConnection";
+
         public void Save(List<LogItemContract> items)
         {
-            var con = new SqlConnection(ConfigurationManager.ConnectionStrings["DatabaseConnection"].ConnectionString);
+            var con = new SqlConnection(ConfigurationManager.ConnectionStrings[CONNECTION_NAME].ConnectionString);
             SqlTransaction t = null;
 
             try
@@ -21,32 +27,22 @@ namespace LogProcessor.Data
                 t = con.BeginTransaction();
 
                 var lockDataTable = new object();
-                var dataTable = new DataTable("dbo.app_performance_lucas");
+                var dataTable = new DataTable(TABLE_NAME);
 
-                var dateColumn = new DataColumn("Date", typeof(DateTime));
-                var ipColumn = new DataColumn("IP", typeof(string));
-                var urlColumn = new DataColumn("URL", typeof(string));                
+                var dateColumn = new DataColumn(DATE_COLUMN_NAME, typeof(DateTime));
+                var ipColumn = new DataColumn(IP_COLUMN_NAME, typeof(string));
+                var urlColumn = new DataColumn(URL_COLUMN_NAME, typeof(string));                
 
                 dataTable.Columns.Add(ipColumn);
                 dataTable.Columns.Add(urlColumn);
                 dataTable.Columns.Add(dateColumn);
-
-                //foreach (var item in items)
-                //{
-                //    var row = dataTable.NewRow();
-                //    row["Date"] = item.Date;
-                //    row["IP"] = item.IP;
-                //    row["URL"] = item.URL;                    
-
-                //    dataTable.Rows.Add(row);
-                //}
-
+                
                 Parallel.ForEach(items, (LogItemContract item) =>
                 {
                     var row = dataTable.NewRow();
-                    row["Date"] = item.Date;
-                    row["IP"] = item.IP;
-                    row["URL"] = item.URL;
+                    row[DATE_COLUMN_NAME] = item.Date;
+                    row[IP_COLUMN_NAME] = item.IP;
+                    row[URL_COLUMN_NAME] = item.URL;
 
                     lock (lockDataTable) 
                         dataTable.Rows.Add(row);
@@ -54,44 +50,25 @@ namespace LogProcessor.Data
 
                 using (var bulkCopy = new SqlBulkCopy(con, SqlBulkCopyOptions.Default, t))
                 {   
-                    bulkCopy.DestinationTableName = "dbo.app_performance_lucas";
-                    bulkCopy.ColumnMappings.Add("Date", "Date");
-                    bulkCopy.ColumnMappings.Add("IP", "IP");
-                    bulkCopy.ColumnMappings.Add("URL", "URL");
+                    bulkCopy.DestinationTableName = TABLE_NAME;
+                    bulkCopy.ColumnMappings.Add(DATE_COLUMN_NAME, DATE_COLUMN_NAME);
+                    bulkCopy.ColumnMappings.Add(IP_COLUMN_NAME, IP_COLUMN_NAME);
+                    bulkCopy.ColumnMappings.Add(URL_COLUMN_NAME, URL_COLUMN_NAME);
 
                     bulkCopy.WriteToServer(dataTable);
                 }
 
-                //Parallel.ForEach(items, (LogItemContract item) =>
-                //{
-                //    var command = con.CreateCommand();
-                //    command.Transaction = t;
-                //    command.CommandText = "INSERT INTO [dbo].[app_performance_lucas](Date, IP, URL) VALUES (@Date, @IP, @URL)";
-                //    command.Parameters.AddRange(GetParameters(item));
-
-                //    command.ExecuteNonQuery();
-                //});
-
                 t.Commit();
             }
-            catch (System.Exception ex)
+            catch(Exception ex)
             {
                 t.Rollback();
+                throw ex;
             }
             finally
             {
                 con.Close();
             }
-        }
-
-        private SqlParameter[] GetParameters(LogItemContract item)
-        {
-            List<SqlParameter> parameters = new List<SqlParameter>();
-            parameters.Add(new SqlParameter("@Date", item.Date));
-            parameters.Add(new SqlParameter("@IP", item.IP));
-            parameters.Add(new SqlParameter("@URL", item.URL));
-
-            return parameters.ToArray();
         }
     }
 }

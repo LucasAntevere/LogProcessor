@@ -5,8 +5,11 @@ namespace LogProcessor
 {
     class Program
     {
-        private const string LOG_FILE_PATH = "C:/Users/lucas.antevere/Documents/access.log.0";
-        private const string PROCESSED_LOG_FILE_PATH = "C:/Users/lucas.antevere/Documents/access.log.processed.0";
+        //private const string LOG_FILE_PATH = "C:/Users/lucas.antevere/Documents/access.log.0";
+        //private const string PROCESSED_LOG_FILE_PATH = "C:/Users/lucas.antevere/Documents/access.log.processed.0";
+
+        private const string LOG_FILE_PATH = "C:/access.log.0";
+        private const string PROCESSED_LOG_FILE_PATH = "C:/access.log.processed.0";
 
         private static readonly ILogProcessor _logProcessor;
 
@@ -17,8 +20,16 @@ namespace LogProcessor
         
         static void Main(string[] args)
         {
-            _logProcessor.Process(LOG_FILE_PATH, PROCESSED_LOG_FILE_PATH);
-            Console.Write("Done! Any key to exit.");
+            try
+            {
+                _logProcessor.Process(LOG_FILE_PATH, PROCESSED_LOG_FILE_PATH);
+                Console.Write("Done! Any key to exit.");
+            }
+            catch (Exception ex)
+            {
+                Console.Write("Error! :( Any key to exit. Error: " + ex.ToString());
+            }
+
             Console.Read();
         }
     }

@@ -23,16 +23,13 @@ namespace LogProcessor.LogProcessor
             _logRepository = logRepository;
         }
 
-        private const string IP_REGEX = @"(?<IP>[ ]{1}[\d]{3}[\.]{1}[\d]{3}[\.]{1}[\d]{1,3}[\.]{1}[\d]{1,3}[ ]{1})";
-        private const string DATE_REGEX = @"(?<DATE>[\d]{10}[\.]{1}[\d]{3})";
-        private const string URL_REGEX = @"(?<URL>[http]{4}.*?[ ]{1})|(?<URL2>[\s]{1}[a-z0-9\.-][^\s]*?[:]{1}[0-9]{1,}[\s]{1})";
+        private const string IP_REGEX = @"([ ]{1}[\d]{3}[\.]{1}[\d]{3}[\.]{1}[\d]{1,3}[\.]{1}[\d]{1,3}[ ]{1})";
+        private const string DATE_REGEX = @"([\d]{10}[\.]{1}[\d]{3})";
+        private const string URL_REGEX = @"([http]{4}.*?[ ]{1})|([\s]{1}[a-z0-9\.-][^\s]*?[:]{1}[0-9]{1,}[\s]{1})";
         
         private const string LOG_DATA_SEPARATOR = ";";
-
-        private const int DATE_GROUP_INDEX = 1;
-        private const int IP_GROUP_INDEX = 2;        
-        private const int URL_GROUP_INDEX = 3;
-        
+        private const string DATE_FORMAT = "dd/MM/yy";
+                
         public void Process(string filePath, string newFilePath)
         {
             long totalMilliseconds = 0;
@@ -54,18 +51,16 @@ namespace LogProcessor.LogProcessor
             totalMilliseconds += timer.ElapsedMilliseconds;
             Console.WriteLine("Parse file: " + timer.ElapsedMilliseconds + " ms");
 
-            var databaseThread = new Thread(() =>
-            {
+            var databaseTask = new Task(() => {
                 var databaseTimer = new Stopwatch();
                 databaseTimer.Start();
-                SaveDatabase(logList);
+                _logRepository.Save(logList);
                 databaseTimer.Stop();
                 totalMilliseconds += databaseTimer.ElapsedMilliseconds;
                 Console.WriteLine("Write Database: " + databaseTimer.ElapsedMilliseconds + " ms");
             });
 
-            var writeFileThread = new Thread(() =>
-            {
+            var writeFileTask = new Task(() => {
                 var fileTimer = new Stopwatch();
                 fileTimer.Start();
                 WriteFile(logList, newFilePath);
@@ -73,12 +68,12 @@ namespace LogProcessor.LogProcessor
                 totalMilliseconds += fileTimer.ElapsedMilliseconds;
                 Console.WriteLine("Write File: " + fileTimer.ElapsedMilliseconds + " ms");
             });
+                        
+            databaseTask.Start();
+            writeFileTask.Start();
 
-            databaseThread.Start();
-            writeFileThread.Start();
-
-            databaseThread.Join();
-            writeFileThread.Join();
+            databaseTask.Wait();
+            writeFileTask.Wait();
 
             Console.WriteLine("Total: " + totalMilliseconds + " ms");
         }
@@ -113,23 +108,17 @@ namespace LogProcessor.LogProcessor
             return logList;
         }
 
-        private void SaveDatabase(List<LogItemContract> items)
-        {
-            _logRepository.Save(items);
-        }
-
         private void WriteFile(List<LogItemContract> items, string newFilePath)
         {
             using (var streamWriter = new StreamWriter(newFilePath))
             {
                 streamWriter.Write(items.Aggregate(new StringBuilder(), (result, logItem) =>
                 {
-                    result.Append(logItem.Date.ToString());
+                    result.Append(logItem.Date.ToString(DATE_FORMAT));
                     result.Append(LOG_DATA_SEPARATOR);
                     result.Append(logItem.IP);
                     result.Append(LOG_DATA_SEPARATOR);
                     result.AppendLine(logItem.URL);
-
                     return result;
                 }).ToString());
             }
