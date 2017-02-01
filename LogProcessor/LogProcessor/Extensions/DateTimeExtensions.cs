@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 
 namespace LogProcessor.Extensions
 {
@@ -14,7 +15,7 @@ namespace LogProcessor.Extensions
         public static DateTime ToDateFromUnixTimestamp(this string unixTimestamp)
         {
             return new DateTime(YEAR_UNIX_BASE, MONTH_UNIX_BASE, DAY_UNIX_BASE, MINUTE_UNIX_BASE, 
-                                SECOND_UNIX_BASE, MILLISECOND_UNIX_BASE, DateTimeKind.Utc).AddSeconds(Convert.ToInt64(Decimal.Parse(unixTimestamp)));
+                                SECOND_UNIX_BASE, MILLISECOND_UNIX_BASE, DateTimeKind.Utc).AddSeconds(Double.Parse(unixTimestamp, new CultureInfo("en-US")));
         }
     }
 }

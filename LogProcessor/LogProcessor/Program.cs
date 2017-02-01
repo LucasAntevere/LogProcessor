@@ -5,8 +5,8 @@ namespace LogProcessor
 {
     class Program
     {
-        private const string LOG_FILE_PATH = "C:/access.log.0";
-        private const string PROCESSED_LOG_FILE_PATH = "C:/access.log.processed.0";
+        private const string LOG_FILE_PATH = "C:/Users/lucas.antevere/Documents/access.log.0";
+        private const string PROCESSED_LOG_FILE_PATH = "C:/Users/lucas.antevere/Documents/access.log.processed.0";
 
         private static readonly ILogProcessor _logProcessor;
 
